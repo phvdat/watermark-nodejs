@@ -21,7 +21,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 	const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
 
 	// Create a directory to store the processed images
-	const imagesFolderPath = 'images';
+	const imagesFolderPath = `images-${Date.now()}`;
 	fs.mkdirSync(imagesFolderPath, { recursive: true });
 	try {
 		for (const row of rows) {
@@ -33,7 +33,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 			for (let i = 0; i < imageUrls.length; i++) {
 				const imageUrl = imageUrls[i];
-				const imageName = `image${i + 1}.jpg`;
+				const imageName = `${name.replaceAll(" ", "-")}-${Date.now()}.webp`;
 				const imagePath = `${folderPath}/${imageName}`;
 
 				try {
