@@ -12,7 +12,8 @@ app.use(cors())
 const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
-	const { logoUrl } = req.body;
+	// const { logoUrl } = req.body;
+	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight } = req.body;
 	const excelFile = req.file;
 	// Process the Excel file
 	const workbook = xlsx.readFile(excelFile.path);
@@ -22,7 +23,6 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 	// Create a directory to store the processed images
 	const imagesFolderPath = 'images';
 	fs.mkdirSync(imagesFolderPath, { recursive: true });
-
 	try {
 		for (const row of rows) {
 			const name = row[1];
@@ -42,8 +42,17 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 					// Composite the logo onto the image as a watermark
 					const logoBuffer = await axios.get(logoUrl, { responseType: 'arraybuffer' });
-					const processedImageBuffer = await sharp(response.data)
-						.composite([{ input: logoBuffer.data }])
+
+					const logoImage = sharp(logoBuffer.data);
+					const originalImage = sharp(response.data);
+
+					// Get the dimensions of the logo and the original image
+					const logoMetadata = await logoImage.metadata();
+					const originalMetadata = await originalImage.metadata();
+
+					const processedImageBuffer = await originalImage
+						.resize(Number(imageWidth), Number(imageHeight)) // Resize the original image
+						.composite([{ input: await logoImage.resize(Number(logoWidth), Number(logoHeight)).toBuffer() }]) // Resize and composite the logo
 						.toBuffer();
 
 					// Save the processed image
