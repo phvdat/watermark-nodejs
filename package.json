@@ -1,0 +1,23 @@
+{
+  "name": "watermark-node-v2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx nodemon index.js"
+  },
+  "author": "phamdat",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "axios": "^1.5.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
+    "jimp": "^0.22.10",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.0.1",
+    "sharp": "^0.32.5",
+    "xlsx": "^0.18.5"
+  }
+}
