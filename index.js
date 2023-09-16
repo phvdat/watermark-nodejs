@@ -58,9 +58,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 					// Save the processed image
 					fs.writeFileSync(imagePath, processedImageBuffer);
-					console.log(`Added watermark to ${imagePath}`);
 				} catch (error) {
-					console.error(`Error downloading image: ${imageUrl}`);
 					console.error(error);
 				}
 			}
@@ -74,8 +72,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		const archive = archiver('zip', { zlib: { level: 9 } });
 
 		output.on('close', () => {
-			console.log('Created ZIP file: images.zip');
-			res.json({ downloadLink: `http://localhost:8000/${zipFileName}` });
+			res.json({ downloadLink: `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}` });
 
 			// Delete the uploaded Excel file and the images folder
 			fs.unlinkSync(excelFile.path);
@@ -91,7 +88,6 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		archive.finalize();
 
 	} catch (error) {
-		console.error('Error processing images:', error);
 		res.status(500).json({ error: 'An error occurred while processing the images.' });
 	}
 });
