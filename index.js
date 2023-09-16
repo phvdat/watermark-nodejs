@@ -13,7 +13,7 @@ const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
 	// const { logoUrl } = req.body;
-	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight } = req.body;
+	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality } = req.body;
 	const excelFile = req.file;
 	// Process the Excel file
 	const workbook = xlsx.readFile(excelFile.path);
@@ -53,6 +53,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					const processedImageBuffer = await originalImage
 						.resize(Number(imageWidth), Number(imageHeight)) // Resize the original image
 						.composite([{ input: await logoImage.resize(Number(logoWidth), Number(logoHeight)).toBuffer() }]) // Resize and composite the logo
+						.webp({ quality: Number(quality) })
 						.toBuffer();
 
 					// Save the processed image
