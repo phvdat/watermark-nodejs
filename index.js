@@ -67,12 +67,15 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		}
 
 		// Create a ZIP file containing the processed images
-		const output = fs.createWriteStream('images.zip');
+
+		const zipFileName = `images-${Date.now()}.zip`;
+		const zipFilePath = `./${zipFileName}`;
+		const output = fs.createWriteStream(zipFilePath);
 		const archive = archiver('zip', { zlib: { level: 9 } });
 
 		output.on('close', () => {
 			console.log('Created ZIP file: images.zip');
-			res.json({ downloadLink: 'http://localhost:8000/images.zip' });
+			res.json({ downloadLink: `http://localhost:8000/${zipFileName}` });
 
 			// Delete the uploaded Excel file and the images folder
 			fs.unlinkSync(excelFile.path);
@@ -107,14 +110,15 @@ function deleteFolderRecursive(folderPath) {
 	}
 }
 
-app.get('/images.zip', (req, res) => {
-	const zipFilePath = 'images.zip';
-	res.download(zipFilePath, (err) => {
+app.get('/:zipFileName', (req, res) => {
+	const zipFileName = req.params.zipFileName;
+	res.download(zipFileName, (err) => {
 		if (err) {
 			console.error('Error downloading ZIP file:', err);
 			res.status(500).json({ error: 'An error occurred while downloading the ZIP file.' });
 		} else {
-			console.log('ZIP file downloaded successfully');
+			// Delete the ZIP file after successful download
+			fs.unlinkSync(zipFileName);
 		}
 	});
 });
