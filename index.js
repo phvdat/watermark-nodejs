@@ -7,6 +7,10 @@ const axios = require('axios');
 var cors = require('cors')
 require('dotenv').config();
 const Jimp = require('jimp');
+const TelegramBot = require('node-telegram-bot-api');
+
+// Create a new Telegram bot instance
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
 const nameColumn = 'Name';
 const imagesColumn = 'Images';
@@ -17,8 +21,10 @@ app.use(cors())
 const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
+	res.json({ processing: true });
 	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality } = req.body;
 	const excelFile = req.file;
+
 	// Process the Excel file
 	const workbook = xlsx.readFile(excelFile.path, { type: "array" });
 	const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -75,11 +81,19 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		const archive = archiver('zip', { zlib: { level: 9 } });
 
 		output.on('close', () => {
-			res.json({ downloadLink: `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}` });
-
-			// Delete the uploaded Excel file and the images folder
-			fs.unlinkSync(excelFile.path);
-			deleteFolderRecursive(imagesFolderPath);
+			bot.sendDocument('5357261496', fs.createReadStream(zipFilePath))
+				.then(() => {
+					// Delete the uploaded Excel file, the images folder, and the ZIP file
+					fs.unlinkSync(excelFile.path);
+					deleteFolderRecursive(imagesFolderPath);
+					fs.unlinkSync(zipFilePath);
+				})
+				.catch((error) => {
+					console.error('Error sending ZIP file to Telegram:', error);
+					fs.unlinkSync(excelFile.path);
+					deleteFolderRecursive(imagesFolderPath);
+					fs.unlinkSync(zipFilePath);
+				});
 		});
 
 		archive.on('error', (err) => {
