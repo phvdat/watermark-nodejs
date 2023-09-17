@@ -2,11 +2,12 @@ const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const fs = require('fs');
-const sharp = require('sharp');
 const archiver = require('archiver');
 const axios = require('axios');
 var cors = require('cors')
 require('dotenv').config();
+const Jimp = require('jimp');
+
 const nameColumn = 'Name';
 const imagesColumn = 'Images';
 
@@ -16,7 +17,6 @@ app.use(cors())
 const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
-	// const { logoUrl } = req.body;
 	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality } = req.body;
 	const excelFile = req.file;
 	// Process the Excel file
@@ -46,18 +46,18 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					// Composite the logo onto the image as a watermark
 					const logoBuffer = await axios.get(logoUrl, { responseType: 'arraybuffer' });
 
-					const logoImage = sharp(logoBuffer.data);
-					const originalImage = sharp(response.data);
+					const logoImage = await Jimp.read(logoBuffer.data);
+					const originalImage = await Jimp.read(response.data);
 
-					// Get the dimensions of the logo and the original image
-					const logoMetadata = await logoImage.metadata();
-					const originalMetadata = await originalImage.metadata();
+					// Resize the original image
+					originalImage.resize(Number(imageWidth), Number(imageHeight));
 
-					const processedImageBuffer = await originalImage
-						.resize(Number(imageWidth), Number(imageHeight)) // Resize the original image
-						.composite([{ input: await logoImage.resize(Number(logoWidth), Number(logoHeight)).toBuffer() }]) // Resize and composite the logo
-						.webp({ quality: Number(quality) })
-						.toBuffer();
+					// Resize and composite the logo
+					logoImage.resize(Number(logoWidth), Number(logoHeight));
+					originalImage.composite(logoImage, 0, 0);
+
+					// Convert the image to WebP format with the specified quality
+					const processedImageBuffer = await originalImage.quality(Number(quality)).getBufferAsync(Jimp.MIME_JPEG);
 
 					// Save the processed image
 					fs.writeFileSync(imagePath, processedImageBuffer);
