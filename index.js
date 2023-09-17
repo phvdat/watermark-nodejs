@@ -6,6 +6,10 @@ const sharp = require('sharp');
 const archiver = require('archiver');
 const axios = require('axios');
 var cors = require('cors')
+require('dotenv').config();
+const nameColumn = 'Name';
+const imagesColumn = 'Images';
+
 
 const app = express();
 app.use(cors())
@@ -16,17 +20,16 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality } = req.body;
 	const excelFile = req.file;
 	// Process the Excel file
-	const workbook = xlsx.readFile(excelFile.path);
+	const workbook = xlsx.readFile(excelFile.path, { type: "array" });
 	const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-	const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-
+	const rows = xlsx.utils.sheet_to_json(worksheet);
 	// Create a directory to store the processed images
 	const imagesFolderPath = `images-${Date.now()}`;
 	fs.mkdirSync(imagesFolderPath, { recursive: true });
 	try {
 		for (const row of rows) {
-			const name = row[1];
-			const imageUrls = row[2].split(',');
+			const name = row[nameColumn];
+			const imageUrls = row[imagesColumn].split(',');
 
 			const folderPath = `${imagesFolderPath}/${name}`;
 			fs.mkdirSync(folderPath, { recursive: true });
@@ -119,6 +122,6 @@ app.get('/:zipFileName', (req, res) => {
 	});
 });
 
-app.listen(8000, () => {
-	console.log('Server is running on port 8000');
+app.listen(process.env.PORT, () => {
+	console.log('Server is running on port', process.env.PORT);
 });
