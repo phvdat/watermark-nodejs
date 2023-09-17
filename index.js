@@ -22,7 +22,7 @@ const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
 	res.json({ processing: true });
-	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality } = req.body;
+	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality, idTelegram } = req.body;
 	const excelFile = req.file;
 
 	// Process the Excel file
@@ -81,18 +81,20 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		const archive = archiver('zip', { zlib: { level: 9 } });
 
 		output.on('close', () => {
-			bot.sendDocument('5357261496', fs.createReadStream(zipFilePath))
+			const downloadLink = `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}`; // Replace with your server's URL
+			const message = `Click the link below to download the processed images:\n${downloadLink}`;
+
+			// Send the message with the download link to Telegram
+			bot.sendMessage(idTelegram, message)
 				.then(() => {
-					// Delete the uploaded Excel file, the images folder, and the ZIP file
+					// Delete the uploaded Excel file and the images folder
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
-					fs.unlinkSync(zipFilePath);
 				})
 				.catch((error) => {
-					console.error('Error sending ZIP file to Telegram:', error);
+					console.error('Error sending download link to Telegram:', error);
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
-					fs.unlinkSync(zipFilePath);
 				});
 		});
 
