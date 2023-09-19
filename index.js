@@ -42,7 +42,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 			for (let i = 0; i < imageUrls.length; i++) {
 				const imageUrl = imageUrls[i];
-				const imageName = `${name.replaceAll(" ", "-")}-${Date.now()}.webp`;
+				const imageName = `${name.replaceAll(" ", "-")}-${Date.now()}.jpg`;
 				const imagePath = `${folderPath}/${imageName}`;
 
 				try {
@@ -133,7 +133,7 @@ app.get('/:zipFileName', (req, res) => {
 			res.status(500).json({ error: 'An error occurred while downloading the ZIP file.' });
 		} else {
 			// Delete the ZIP file after successful download
-			fs.unlinkSync(zipFileName);
+			// fs.unlinkSync(zipFileName);
 		}
 	});
 });
