@@ -8,13 +8,13 @@ var cors = require('cors')
 require('dotenv').config();
 const Jimp = require('jimp');
 const TelegramBot = require('node-telegram-bot-api');
-
+const piexif = require('piexifjs');
 // Create a new Telegram bot instance
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 
+
 const nameColumn = 'Name';
 const imagesColumn = 'Images';
-
 
 const app = express();
 app.use(cors())
@@ -22,7 +22,7 @@ const upload = multer({ dest: 'uploads/' });
 
 app.post('/process', upload.single('excelFile'), async (req, res) => {
 	res.json({ processing: true });
-	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality, idTelegram } = req.body;
+	const { logoUrl, logoWidth, logoHeight, imageWidth, imageHeight, quality, idTelegram, shopName } = req.body;
 	const excelFile = req.file;
 
 	// Process the Excel file
@@ -67,6 +67,29 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 					// Save the processed image
 					fs.writeFileSync(imagePath, processedImageBuffer);
+
+					// Update EXIF metadata of the image
+					const jpegData = fs.readFileSync(imagePath);
+					const exifData = piexif.load(jpegData.toString('binary'));
+
+					// Modify the desired EXIF metadata fields
+					exifData['0th'][piexif.ImageIFD.XPTitle] = [...Buffer.from(name, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.XPSubject] = [...Buffer.from(name, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.XPComment] = [...Buffer.from(name, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.XPAuthor] = [...Buffer.from(shopName, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.ExifTag] = [...Buffer.from(shopName, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.Rating] = Math.floor(Math.random() * 3 + 3);
+					exifData['0th'][piexif.ImageIFD.Make] = 'Photographer of ' + shopName;
+					exifData['0th'][piexif.ImageIFD.Model] = 'Model of ' + shopName;
+					exifData['0th'][piexif.ImageIFD.Copyright] = `Copyright ${new Date().getFullYear()} © ${shopName}`;
+					exifData['0th'][piexif.ImageIFD.Software] = shopName;
+
+					// Encode the updated EXIF data
+					const updatedExifData = piexif.dump(exifData);
+
+					// Update the image with the modified EXIF data
+					const updatedJpegData = piexif.insert(updatedExifData, jpegData.toString('binary'));
+					fs.writeFileSync(imagePath, Buffer.from(updatedJpegData, 'binary'));
 				} catch (error) {
 					console.error(error);
 				}
@@ -82,7 +105,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 		output.on('close', () => {
 			const downloadLink = `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}`; // Replace with your server's URL
-			const message = `Click the link below to download the processed images:\n${downloadLink}`;
+			const message = `Click the link below to download the processed images:\n${downloadLink} \nLink will be expired in 10 hours`;
 
 			// Send the message with the download link to Telegram
 			bot.sendMessage(idTelegram, message)
@@ -90,11 +113,21 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					// Delete the uploaded Excel file and the images folder
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
+					const deletionTime = 10 * 60 * 60 * 1000; // 10 hours
+					setTimeout(() => {
+						// Check if the ZIP file still exists before attempting to delete it
+						if (fs.existsSync(zipFileName)) {
+							fs.unlinkSync(zipFileName);
+						}
+					}, deletionTime);
 				})
 				.catch((error) => {
 					console.error('Error sending download link to Telegram:', error);
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
+					if (fs.existsSync(zipFileName)) {
+						fs.unlinkSync(zipFileName);
+					}
 				});
 		});
 
