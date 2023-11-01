@@ -30,7 +30,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 	const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 	const rows = xlsx.utils.sheet_to_json(worksheet);
 	// Create a directory to store the processed images
-	const imagesFolderPath = `images-${Date.now()}`;
+	const imagesFolderPath = `media/images-${Date.now()}`;
 	fs.mkdirSync(imagesFolderPath, { recursive: true });
 	try {
 		for (const row of rows) {
@@ -73,12 +73,11 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					const exifData = piexif.load(jpegData.toString('binary'));
 
 					// Modify the desired EXIF metadata fields
-					exifData['0th'][piexif.ImageIFD.XPTitle] = [...Buffer.from(name, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.XPSubject] = [...Buffer.from(name, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.XPComment] = [...Buffer.from(name, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.XPSubject] = [...Buffer.from(`Product picture of ${name}`, 'ucs2')];
+					exifData['0th'][piexif.ImageIFD.XPComment] = [...Buffer.from(`Images ${i + 1} of ${name}`, 'ucs2')];
 					exifData['0th'][piexif.ImageIFD.XPAuthor] = [...Buffer.from(shopName, 'ucs2')];
 					exifData['0th'][piexif.ImageIFD.ExifTag] = [...Buffer.from(shopName, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.Rating] = Math.floor(Math.random() * 3 + 3);
+					exifData['0th'][piexif.ImageIFD.Rating] = 5;
 					exifData['0th'][piexif.ImageIFD.Make] = 'Photographer of ' + shopName;
 					exifData['0th'][piexif.ImageIFD.Model] = 'Model of ' + shopName;
 					exifData['0th'][piexif.ImageIFD.Copyright] = `Copyright ${new Date().getFullYear()} © ${shopName}`;
@@ -99,13 +98,13 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		// Create a ZIP file containing the processed images
 
 		const zipFileName = `images-${Date.now()}.zip`;
-		const zipFilePath = `./${zipFileName}`;
+		const zipFilePath = `./media/${zipFileName}`;
 		const output = fs.createWriteStream(zipFilePath);
 		const archive = archiver('zip', { zlib: { level: 9 } });
 
 		output.on('close', () => {
 			const downloadLink = `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}`; // Replace with your server's URL
-			const message = `Click the link below to download the processed images:\n${downloadLink} \nLink will be expired in 10 hours`;
+			const message = `Click the link below to download the processed images:\n${downloadLink} \nLink will be expired in 5 hours`;
 
 			// Send the message with the download link to Telegram
 			bot.sendMessage(idTelegram, message)
@@ -113,7 +112,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					// Delete the uploaded Excel file and the images folder
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
-					const deletionTime = 10 * 60 * 60 * 1000; // 10 hours
+					const deletionTime = 5 * 60 * 60 * 1000; // 10 hours
 					setTimeout(() => {
 						// Check if the ZIP file still exists before attempting to delete it
 						if (fs.existsSync(zipFileName)) {
@@ -141,6 +140,11 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 	} catch (error) {
 		res.status(500).json({ error: 'An error occurred while processing the images.' });
+		fs.unlinkSync(excelFile.path);
+		deleteFolderRecursive(imagesFolderPath);
+		if (fs.existsSync(zipFileName)) {
+			fs.unlinkSync(zipFileName);
+		}
 	}
 });
 
@@ -160,7 +164,7 @@ function deleteFolderRecursive(folderPath) {
 
 app.get('/:zipFileName', (req, res) => {
 	const zipFileName = req.params.zipFileName;
-	res.download(zipFileName, (err) => {
+	res.download(`media/${zipFileName}`, (err) => {
 		if (err) {
 			console.error('Error downloading ZIP file:', err);
 			res.status(500).json({ error: 'An error occurred while downloading the ZIP file.' });
