@@ -42,7 +42,8 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 			for (let i = 0; i < imageUrls.length; i++) {
 				const imageUrl = imageUrls[i];
-				const imageName = `${name.replaceAll(" ", "-")}-${i + 1}.jpg`;
+				// const imageName = `${name.replaceAll(" ", "-")}-${i + 1}.jpg`;
+				const imageName = `${name} ${i + 1}.jpg`;
 				const imagePath = `${folderPath}/${imageName}`;
 
 				try {
@@ -73,11 +74,12 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					const exifData = piexif.load(jpegData.toString('binary'));
 
 					// Modify the desired EXIF metadata fields
-					exifData['0th'][piexif.ImageIFD.XPSubject] = [...Buffer.from(`Product picture of ${name}`, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.XPComment] = [...Buffer.from(`Images ${i + 1} of ${name}`, 'ucs2')];
+					// exifData['0th'][piexif.ImageIFD.XPTitle] = [...Buffer.from(name, 'ucs2')];
+					// exifData['0th'][piexif.ImageIFD.XPSubject] = [...Buffer.from(`Product picture of ${name}`, 'ucs2')];
+					// exifData['0th'][piexif.ImageIFD.XPComment] = [...Buffer.from(`Images ${i + 1} of ${name}`, 'ucs2')];
+					// exifData['0th'][piexif.ImageIFD.ExifTag] = [...Buffer.from(shopName, 'ucs2')];
+					// exifData['0th'][piexif.ImageIFD.Rating] = 5;
 					exifData['0th'][piexif.ImageIFD.XPAuthor] = [...Buffer.from(shopName, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.ExifTag] = [...Buffer.from(shopName, 'ucs2')];
-					exifData['0th'][piexif.ImageIFD.Rating] = 5;
 					exifData['0th'][piexif.ImageIFD.Make] = 'Photographer of ' + shopName;
 					exifData['0th'][piexif.ImageIFD.Model] = 'Model of ' + shopName;
 					exifData['0th'][piexif.ImageIFD.Copyright] = `Copyright ${new Date().getFullYear()} © ${shopName}`;
@@ -114,19 +116,14 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 					deleteFolderRecursive(imagesFolderPath);
 					const deletionTime = 5 * 60 * 60 * 1000; // 10 hours
 					setTimeout(() => {
-						// Check if the ZIP file still exists before attempting to delete it
-						if (fs.existsSync(zipFileName)) {
-							fs.unlinkSync(zipFileName);
-						}
+						fs.unlinkSync(zipFilePath);
 					}, deletionTime);
 				})
 				.catch((error) => {
 					console.error('Error sending download link to Telegram:', error);
 					fs.unlinkSync(excelFile.path);
 					deleteFolderRecursive(imagesFolderPath);
-					if (fs.existsSync(zipFileName)) {
-						fs.unlinkSync(zipFileName);
-					}
+					fs.unlinkSync(zipFilePath);
 				});
 		});
 
@@ -142,9 +139,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 		res.status(500).json({ error: 'An error occurred while processing the images.' });
 		fs.unlinkSync(excelFile.path);
 		deleteFolderRecursive(imagesFolderPath);
-		if (fs.existsSync(zipFileName)) {
-			fs.unlinkSync(zipFileName);
-		}
+		fs.unlinkSync(zipFilePath);
 	}
 });
 
@@ -170,7 +165,7 @@ app.get('/:zipFileName', (req, res) => {
 			res.status(500).json({ error: 'An error occurred while downloading the ZIP file.' });
 		} else {
 			// Delete the ZIP file after successful download
-			// fs.unlinkSync(zipFileName);
+			// fs.unlinkSync(zipFilePath);
 		}
 	});
 });
