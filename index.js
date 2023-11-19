@@ -42,8 +42,8 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 
 			for (let i = 0; i < imageUrls.length; i++) {
 				const imageUrl = imageUrls[i];
-				// const imageName = `${name.replaceAll(" ", "-")}-${i + 1}.jpg`;
-				const imageName = `${name} ${i + 1}.jpg`;
+				const imageName = `${name.replaceAll(" ", "-")}-${i + 1}.jpg`;
+				// const imageName = `${name} ${i + 1}.jpg`;
 				const imagePath = `${folderPath}/${imageName}`;
 
 				try {
