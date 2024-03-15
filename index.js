@@ -35,7 +35,10 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
 	// Process the Excel file
 	const workbook = xlsx.readFile(excelFile.path, { type: 'array' });
 	const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-	const rows = xlsx.utils.sheet_to_json(worksheet);
+	const rowsRaw = xlsx.utils.sheet_to_json(worksheet);
+	const rows = rowsRaw.filter(row => {
+		return row.Name && row.Images;
+	});
 	const imagesFolderPath = `media/images-${Date.now()}`;
 	fs.mkdirSync(imagesFolderPath, { recursive: true });
 	const zipFileName = `images-${Date.now()}.zip`;
