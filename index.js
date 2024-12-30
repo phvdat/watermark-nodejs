@@ -9,6 +9,11 @@ var cors = require('cors');
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const addMetadata = require('./helper/addMetadata');
+const {
+  uploadFile,
+  getListFile,
+  downloadAllFile,
+} = require('./models/upload.model');
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 const nameColumn = 'Name';
@@ -31,7 +36,12 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
     shopName,
   } = req.body;
   const excelFile = req.file;
-
+  await uploadFile(
+    excelFile,
+    `${shopName}-${moment().format('YYYY-MM-DD-HH-mm-ss')}-${
+      excelFile.originalname
+    }`
+  );
   // Process the Excel file
   const workbook = xlsx.readFile(excelFile.path, { type: 'array' });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -153,6 +163,8 @@ function deleteFolderRecursive(folderPath) {
     }
   }
 }
+
+app.get('/download-all-files', downloadAllFile);
 
 app.get('/:zipFileName', (req, res) => {
   const zipFileName = req.params.zipFileName;
