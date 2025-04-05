@@ -9,11 +9,10 @@ var cors = require('cors');
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const addMetadata = require('./helper/addMetadata');
-const {
-  uploadFile,
-  getListFile,
-  downloadAllFile,
-} = require('./models/upload.model');
+
+const moment = require('moment');
+const { sendFileToTelegram } = require('./models/common.model');
+const { uploadFile } = require('./models/upload.model');
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 const nameColumn = 'Name';
@@ -36,12 +35,12 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
     shopName,
   } = req.body;
   const excelFile = req.file;
-  await uploadFile(
-    excelFile,
-    `${shopName}-${moment().format('YYYY-MM-DD-HH-mm-ss')}-${
-      excelFile.originalname
-    }`
-  );
+  const filename = `${shopName}-${moment().format('YYYY-MM-DD-HH-mm-ss')}-${
+    excelFile.originalname
+  }`;
+  await uploadFile(excelFile, filename);
+  await sendFileToTelegram(bot, excelFile.path, filename);
+
   // Process the Excel file
   const workbook = xlsx.readFile(excelFile.path, { type: 'array' });
   const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -54,7 +53,6 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
   const zipFileName = `images-${Date.now()}.zip`;
   const zipFilePath = `./media/${zipFileName}`;
   try {
-    console.log(rows);
     for (const row of rows) {
       const regex = /[^a-zA-Z0-9\s]/g;
       const nameOrigin = row[nameColumn];
@@ -67,6 +65,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
         responseType: 'arraybuffer',
       });
 
+      console.log('heleeee');
       const resizedLogo = await sharp(logoResponse.data)
         .resize(Number(logoWidth), Number(logoHeight))
         .toBuffer();
@@ -100,7 +99,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
           // Update EXIF metadata of the image
           addMetadata(name, shopName, imagePath);
         } catch (error) {
-          console.error(error.response);
+          console.error('error main', error.response);
           continue;
         }
       }
@@ -111,6 +110,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
     output.on('close', () => {
       const downloadLink = `${process.env.REACT_APP_API_ENDPOINT}/${zipFileName}`;
       const message = `Click the link below to download the processed images:\n${downloadLink} \nLink will be expired in 5 hours`;
+
       bot
         .sendMessage(idTelegram, message)
         .then(() => {
@@ -137,6 +137,7 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
     archive.directory(imagesFolderPath, false);
     archive.finalize();
   } catch (error) {
+    console.log('error', error);
     res.status(500);
     fs.unlinkSync(excelFile.path);
     deleteFolderRecursive(imagesFolderPath);
@@ -163,8 +164,6 @@ function deleteFolderRecursive(folderPath) {
     }
   }
 }
-
-app.get('/download-all-files', downloadAllFile);
 
 app.get('/:zipFileName', (req, res) => {
   const zipFileName = req.params.zipFileName;
