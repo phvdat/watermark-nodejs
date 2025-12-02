@@ -9,10 +9,12 @@ var cors = require('cors');
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const addMetadata = require('./helper/addMetadata');
-
+const axiosRetry = require('axios-retry').default;
 const moment = require('moment');
 const { sendFileToTelegram } = require('./models/common.model');
 const { uploadFile } = require('./models/upload.model');
+
+axiosRetry(axios, { retries: 3 });
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
 const nameColumn = 'Name';
