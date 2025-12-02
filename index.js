@@ -64,8 +64,6 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
       const logoResponse = await axios.get(logoUrl, {
         responseType: 'arraybuffer',
       });
-
-      console.log('heleeee');
       const resizedLogo = await sharp(logoResponse.data)
         .resize(Number(logoWidth), Number(logoHeight))
         .toBuffer();
@@ -82,6 +80,8 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
               'accept-encoding': 'gzip, deflate',
             },
           });
+          console.log(`Success: ${imageUrl}`);
+
           const buffer = await sharp(response.data)
             .resize(Number(imageWidth), Number(imageHeight))
             .composite([
@@ -114,7 +114,6 @@ app.post('/process', upload.single('excelFile'), async (req, res) => {
       bot
         .sendMessage(idTelegram, message)
         .then(() => {
-          // fs.unlinkSync(excelFile.path);
           deleteFolderRecursive(imagesFolderPath);
           const deletionTime = 5 * 60 * 60 * 1000; // 10 hours
           setTimeout(() => {

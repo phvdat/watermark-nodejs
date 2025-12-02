@@ -41,7 +41,6 @@ async function uploadFile(file, name) {
     });
 
     const fileId = createFile.data.id;
-    console.log('Upload success. File ID:', fileId);
     return fileId;
   } catch (error) {
     console.error('Upload failed:', error);

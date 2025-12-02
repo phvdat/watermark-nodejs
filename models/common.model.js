@@ -14,23 +14,11 @@ async function sendFileToTelegram(bot, filePath, fileName) {
   bot
     .sendDocument('5357261496', csvFilePath)
     .then(() => {
-      fs.unlink(csvFilePath, (err) => {
-        if (err) {
-          console.error('Error deleting file:', err);
-        } else {
-          console.log('CSV file deleted successfully.');
-        }
-      });
+      fs.unlink(csvFilePath, () => {});
     })
     .catch((error) => {
       console.error('Error sending file:', error);
-      fs.unlink(csvFilePath, (err) => {
-        if (err) {
-          console.error('Error deleting file after failure:', err);
-        } else {
-          console.log('CSV file deleted successfully after failure.');
-        }
-      });
+      fs.unlink(csvFilePath, () => {});
     });
 }
 
